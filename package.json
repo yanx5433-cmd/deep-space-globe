@@ -1,0 +1,31 @@
+{
+  "name": "deep-space-globe",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "手势控制的深空地球仪 —— Three.js 点阵地球 + MediaPipe 浏览器手势识别",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "generate:landmask": "node scripts/generate-land-mask.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.14",
+    "@react-three/fiber": "^9.0.0",
+    "react": "~19.2.0",
+    "react-dom": "~19.2.0",
+    "three": "^0.174.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.174.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0",
+    "world-atlas": "^2.0.2"
+  }
+}
