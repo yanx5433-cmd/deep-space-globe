@@ -48,9 +48,10 @@ export function StartupOverlay() {
         <div className="overlay-title">启动深空制图仪</div>
         <div className="overlay-desc">启用摄像头后可使用手势控制，也可以使用鼠标操作</div>
         <div className="overlay-list">
+          <div>张开手掌停住 —— 持续放大</div>
+          <div>握拳 —— 持续缩小（保持 2 秒重置视角）</div>
           <div>移动手掌 —— 旋转地球</div>
-          <div>手掌推近 / 拉远 —— 放大 / 缩小</div>
-          <div>握拳 —— 持续拉远，保持 2 秒重置视角</div>
+          <div>拇指与食指捏合 —— 精确缩放</div>
           <div>食指指向热点并停留 —— 聚焦城市</div>
         </div>
         <div className="overlay-actions">

@@ -79,6 +79,20 @@ export function StatusCluster() {
         {menuOpen && (
           <div className="popover">
             <div className="pop-row">
+              <span>灵敏度</span>
+              <div className="seg">
+                {(['low', 'standard', 'high'] as const).map((lv) => (
+                  <button
+                    key={lv}
+                    className={`seg-btn ${settings.sensitivity === lv ? 'on' : ''}`}
+                    onClick={() => patchSettings({ sensitivity: lv })}
+                  >
+                    {lv === 'low' ? '低' : lv === 'standard' ? '标准' : '高'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="pop-row">
               <span>显示调试画面</span>
               <span
                 className={`switch ${settings.debugVideo ? 'on' : ''}`}

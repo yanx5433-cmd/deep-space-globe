@@ -25,26 +25,35 @@ const LOCAL_MODEL = `${BASE}models/hand_landmarker.task`
 const CDN_MODEL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
 
-const VOTE_LEN = 5
-const VOTE_NEED = 3
-const SWITCH_COOLDOWN_MS = 150
-const PINCH_GAIN = 7.5
-const PINCH_EMA = 0.4
-const ROT_K = 6.0
-const TILT_K = 5.5
-const DEAD_ZONE = 0.0035
-const MAX_STEP = 0.12
-const MIN_PALM = 0.045
-/** 手掌推近/拉远缩放增益（手掌大小的对数变化 → 缩放对数变化） */
-const PALM_ZOOM_GAIN = 1.15
-const PALM_ZOOM_DEADZONE = 0.012
-/** 握拳持续缩放速度（每秒缩放对数） */
-const FIST_ZOOM_SPEED = 0.5
+const VOTE_LEN = 4
+const VOTE_NEED = 2
+const SWITCH_COOLDOWN_MS = 90
+const MIN_PALM = 0.03
+/** 握拳持续缩小速度（每秒缩放对数） */
+const FIST_ZOOM_SPEED = 0.62
 /** 握拳保持该时长后重置视角 */
 const FIST_RESET_MS = 2000
 const DWELL_MS = 500
 const DWELL_RADIUS = 46
 const SELECT_COOLDOWN_MS = 1300
+
+/**
+ * 灵敏度档位：
+ * - deltaAlpha：手掌位移滤波强度（越大越跟手）
+ * - rotK/tiltK：手掌位移 → 旋转弧度
+ * - maxStep：单帧旋转上限（防止快速甩手跳变）
+ * - pinchGain/pinchEma：捏合缩放灵敏度
+ * - openZoomRate：张开手掌保持不动时的放大速率（缩放对数/秒）
+ * - stillMove：判定"手停住"的单帧位移阈值
+ * - smoothK：相机/地球阻尼倍率
+ */
+const PROFILES = {
+  low: { deltaAlpha: 0.5, rotK: 5.5, tiltK: 5.0, maxStep: 0.10, pinchGain: 6.5, pinchEma: 0.32, openZoomRate: 0.28, stillMove: 0.0022, smoothK: 0.7 },
+  standard: { deltaAlpha: 0.66, rotK: 7.5, tiltK: 6.4, maxStep: 0.16, pinchGain: 9.0, pinchEma: 0.5, openZoomRate: 0.42, stillMove: 0.003, smoothK: 1 },
+  high: { deltaAlpha: 0.82, rotK: 9.5, tiltK: 8.0, maxStep: 0.24, pinchGain: 12.0, pinchEma: 0.65, openZoomRate: 0.6, stillMove: 0.004, smoothK: 1.3 },
+} as const
+
+type Profile = (typeof PROFILES)[keyof typeof PROFILES]
 
 export type CameraFailStatus = 'denied' | 'missing' | 'busy' | 'insecure' | 'error'
 
@@ -69,13 +78,17 @@ export class GestureEngine {
   private vote: GestureKind[] = []
   private stable: GestureKind = 'none'
   private lastSwitchAt = 0
+  private profile: Profile = PROFILES.high
+  private unsubscribe: (() => void) | null = null
+  private frameHandle: number | null = null
+  private lastFrameAt = 0
 
   /** 手掌运动：原始上一帧位置 + 低通滤波后的位移（保留幅度，滤除抖动） */
   private palmRaw = { x: 0.5, y: 0.5 }
   private palmDelta = { x: 0, y: 0 }
   private palmInit = false
-  /** 手掌尺寸 EMA：用于"推近/拉远"连续缩放 */
-  private palmSizeEma = 0
+  /** 手掌位移速度 EMA：用于判定"手停住"（张开手掌停住 → 放大） */
+  private moveEma = 0
   private pinchEma = 0
   private pinchBaseDist = 0
   private pinchBaseZoom = 0
@@ -135,10 +148,65 @@ export class GestureEngine {
     useStore.getState().setCameraStatus('online')
     useStore.getState().setEngineStatus('ready')
     useStore.getState().setTracking(false)
+    this.applySensitivity(useStore.getState().settings.sensitivity)
+    this.unsubscribe = useStore.subscribe((s, prev) => {
+      if (s.settings.sensitivity !== prev.settings.sensitivity) {
+        this.applySensitivity(s.settings.sensitivity)
+      }
+    })
     this.running = true
     this.lastT = performance.now()
-    this.timer = window.setInterval(() => this.tick(), 30)
+    this.startLoop()
     return { ok: true }
+  }
+
+  private applySensitivity(level: keyof typeof PROFILES): void {
+    this.profile = PROFILES[level] ?? PROFILES.standard
+    controls.smoothK = this.profile.smoothK
+  }
+
+  /**
+   * 逐帧推理：优先使用 requestVideoFrameCallback（摄像头每出一帧就处理，
+   * 没有轮询漂移，延迟最低）；不支持时退回 30fps 定时器。
+   */
+  private startLoop(): void {
+    const video = this.video as (HTMLVideoElement & {
+      requestVideoFrameCallback?: (cb: () => void) => number
+    }) | null
+    if (!video) return
+
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      const onFrame = () => {
+        if (!this.running) return
+        this.tick()
+        if (this.running) this.frameHandle = video.requestVideoFrameCallback!(onFrame)
+      }
+      this.frameHandle = video.requestVideoFrameCallback(onFrame)
+    } else {
+      const loop = () => {
+        if (!this.running) return
+        this.tick()
+        this.timer = window.setTimeout(loop, 28)
+      }
+      this.timer = window.setTimeout(loop, 28)
+    }
+  }
+
+  private stopLoop(): void {
+    if (this.timer !== null) {
+      window.clearTimeout(this.timer)
+      window.clearInterval(this.timer)
+      this.timer = null
+    }
+    const video = this.video as (HTMLVideoElement & {
+      cancelVideoFrameCallback?: (h: number) => void
+    }) | null
+    if (video && this.frameHandle !== null && typeof video.cancelVideoFrameCallback === 'function') {
+      video.cancelVideoFrameCallback(this.frameHandle)
+    }
+    this.frameHandle = null
+    this.unsubscribe?.()
+    this.unsubscribe = null
   }
 
   private mapStatus(s: string): CameraFailStatus {
@@ -222,9 +290,9 @@ export class GestureEngine {
               baseOptions: { modelAssetPath: model, delegate: 'GPU' },
               runningMode: 'VIDEO',
               numHands: 1,
-              minHandDetectionConfidence: 0.5,
-              minHandPresenceConfidence: 0.5,
-              minTrackingConfidence: 0.5,
+              minHandDetectionConfidence: 0.4,
+              minHandPresenceConfidence: 0.4,
+              minTrackingConfidence: 0.45,
             })
             return
           } catch (gpuErr) {
@@ -246,10 +314,8 @@ export class GestureEngine {
 
   disable(): void {
     this.running = false
-    if (this.timer !== null) {
-      window.clearInterval(this.timer)
-      this.timer = null
-    }
+    this.stopLoop()
+    controls.smoothK = 1
     this.stopCamera()
     try {
       this.landmarker?.close()
@@ -357,12 +423,13 @@ export class GestureEngine {
     switch (g) {
       case 'open': {
         beginDrag()
+        const P = this.profile
         if (!this.palmInit) {
           this.palmRaw.x = a.palm.x
           this.palmRaw.y = a.palm.y
           this.palmDelta.x = 0
           this.palmDelta.y = 0
-          this.palmSizeEma = a.palmSize
+          this.moveEma = 0
           this.palmInit = true
           break
         }
@@ -371,26 +438,28 @@ export class GestureEngine {
         const rawDy = a.palm.y - this.palmRaw.y
         this.palmRaw.x = a.palm.x
         this.palmRaw.y = a.palm.y
-        this.palmDelta.x += (rawDx - this.palmDelta.x) * 0.6
-        this.palmDelta.y += (rawDy - this.palmDelta.y) * 0.6
-        let dx = this.palmDelta.x * ROT_K
-        let dy = this.palmDelta.y * TILT_K
+        this.palmDelta.x += (rawDx - this.palmDelta.x) * P.deltaAlpha
+        this.palmDelta.y += (rawDy - this.palmDelta.y) * P.deltaAlpha
+        // 手部移动速度（用于区分"旋转"和"停住放大"）
+        const moveMag = Math.hypot(rawDx, rawDy)
+        this.moveEma += (moveMag - this.moveEma) * 0.4
+
+        let dx = this.palmDelta.x * P.rotK
+        let dy = this.palmDelta.y * P.tiltK
         // 死区
-        if (Math.abs(this.palmDelta.x) < DEAD_ZONE) dx = 0
-        if (Math.abs(this.palmDelta.y) < DEAD_ZONE) dy = 0
-        // 速度上限（每帧约 4.5 rad/s，快速滑动也能跟上）
+        if (Math.abs(this.palmDelta.x) < 0.0022) dx = 0
+        if (Math.abs(this.palmDelta.y) < 0.0022) dy = 0
+        // 单帧上限，避免甩手跳变
         const mag = Math.hypot(dx, dy)
-        if (mag > MAX_STEP) {
-          dx = (dx / mag) * MAX_STEP
-          dy = (dy / mag) * MAX_STEP
+        if (mag > P.maxStep) {
+          dx = (dx / mag) * P.maxStep
+          dy = (dy / mag) * P.maxStep
         }
         if (dx !== 0 || dy !== 0) inputRotate(dx, dy, dtMs / 1000)
-        // 手掌推近/拉远 → 连续缩放：手掌在画面中变大（伸向镜头）= 放大
-        const prevSize = this.palmSizeEma
-        this.palmSizeEma += (a.palmSize - this.palmSizeEma) * 0.3
-        const dLog = Math.log(this.palmSizeEma / Math.max(prevSize, 1e-4))
-        if (Math.abs(dLog) > PALM_ZOOM_DEADZONE) {
-          inputZoomDelta(-dLog * PALM_ZOOM_GAIN)
+
+        // 张开手掌且手停住 → 持续放大（张开手掌 = 放大）
+        if (this.moveEma < P.stillMove) {
+          inputZoomDelta(-P.openZoomRate * (dtMs / 1000))
         }
         break
       }
@@ -404,9 +473,9 @@ export class GestureEngine {
           this.pinchCalibrated = true
           break
         }
-        this.pinchEma += (a.pinchDist - this.pinchEma) * PINCH_EMA
+        this.pinchEma += (a.pinchDist - this.pinchEma) * this.profile.pinchEma
         // 以进入手势时的距离为基准做相对连续缩放
-        const zoom = this.pinchBaseZoom + (this.pinchBaseDist - this.pinchEma) * PINCH_GAIN
+        const zoom = this.pinchBaseZoom + (this.pinchBaseDist - this.pinchEma) * this.profile.pinchGain
         setPinchZoom(clamp(zoom, ZOOM_MIN, ZOOM_MAX))
         break
       }
@@ -445,6 +514,13 @@ export class GestureEngine {
   private onGestureChange(prev: GestureKind, next: GestureKind): void {
     if (prev !== 'open') {
       this.palmInit = false
+      this.moveEma = 0
+    }
+    if (next === 'open') {
+      // 重新进入张开手势时，先重置位移基准，避免切换瞬间跳变
+      this.palmInit = false
+      this.palmDelta.x = 0
+      this.palmDelta.y = 0
     }
     if (next === 'pinch') {
       this.pinchCalibrated = false

@@ -6,10 +6,13 @@ export type CameraStatus = 'off' | 'requesting' | 'online' | 'denied' | 'missing
 export type EngineStatus = 'off' | 'loading' | 'ready' | 'error'
 export type GestureKind = 'none' | 'open' | 'pinch' | 'point' | 'fist'
 
+export type Sensitivity = 'low' | 'standard' | 'high'
+
 export interface Settings {
   debugVideo: boolean
   sound: boolean
   autoRotate: boolean
+  sensitivity: Sensitivity
 }
 
 export interface Toast {
@@ -53,7 +56,7 @@ export const useStore = create<AppState>()((set, get) => ({
   engineStatus: 'off',
   gesture: 'none',
   tracking: false,
-  settings: { debugVideo: false, sound: false, autoRotate: true },
+  settings: { debugVideo: false, sound: false, autoRotate: true, sensitivity: 'high' },
   selectedCityId: null,
   hoverCityId: null,
   reducedMotion: false,

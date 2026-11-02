@@ -47,6 +47,8 @@ export const controls = {
   autoRamp: 0,
   /** 由 App 与 reduced-motion 设置同步 */
   reduced: false,
+  /** 全局阻尼倍率（由手势灵敏度档位调整） */
+  smoothK: 1,
 }
 
 const now = () => performance.now()

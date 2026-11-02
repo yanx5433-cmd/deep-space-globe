@@ -91,11 +91,11 @@ export function Scene() {
       if (canAuto && c.autoRamp > 0) {
         c.targetY += 0.034 * Math.sin((c.autoRamp * Math.PI) / 2) * dt * (reducedRef.current ? 0.45 : 1)
       }
-      // 阻尼
-      const kR = 1 - Math.exp(-7.5 * dt)
+      // 阻尼（倍率随灵敏度档位变化，默认更跟手）
+      const kR = 1 - Math.exp(-13 * c.smoothK * dt)
       c.rotX += (c.targetX - c.rotX) * kR
       c.rotY += (c.targetY - c.rotY) * kR
-      const kZ = 1 - Math.exp(-6.5 * dt)
+      const kZ = 1 - Math.exp(-11 * c.smoothK * dt)
       c.zoom += (c.zoomTarget - c.zoom) * kZ
     }
 

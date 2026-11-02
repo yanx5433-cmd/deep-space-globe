@@ -233,12 +233,45 @@ body {
   position: absolute;
   top: 38px;
   right: 0;
-  width: 196px;
+  width: 214px;
   border: 1px solid rgba(127, 208, 255, 0.28);
   background: rgba(5, 12, 26, 0.94);
   padding: 10px 12px 8px;
   z-index: 10;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+.seg {
+  display: flex;
+  border: 1px solid rgba(127, 208, 255, 0.32);
+  flex: none;
+}
+
+.seg-btn {
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  padding: 3px 6px;
+  color: rgba(180, 215, 245, 0.7);
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(127, 208, 255, 0.22);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.seg-btn:first-child {
+  border-left: none;
+}
+
+.seg-btn:hover {
+  color: #fff;
+}
+
+.seg-btn.on {
+  color: #04101f;
+  background: var(--ice);
+  box-shadow: 0 0 10px rgba(127, 208, 255, 0.45);
 }
 
 .pop-row {
