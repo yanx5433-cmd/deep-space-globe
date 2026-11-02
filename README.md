@@ -6,6 +6,10 @@
 
 ![tech](https://img.shields.io/badge/Vite-6-blue) ![tech](https://img.shields.io/badge/React-19-blue) ![tech](https://img.shields.io/badge/Three.js-0.174-blue) ![tech](https://img.shields.io/badge/MediaPipe-HandLandmarker-orange)
 
+▶ **在线体验**：[yanx5433-cmd.github.io/deep-space-globe](https://yanx5433-cmd.github.io/deep-space-globe/)（建议全屏；手势控制需允许摄像头）
+
+![预览](docs/preview.png)
+
 ---
 
 ## 快速启动
@@ -19,7 +23,7 @@ npm run dev        # 打开 http://localhost:5173
 
 ```bash
 npm run build
-npm run preview
+npm run preview    # 注意：构建产物按 GitHub Pages 子路径生成，预览地址为 http://localhost:4173/deep-space-globe/
 ```
 
 > 无任何付费 API、无需 API Key。陆地数据与手势模型均已本地打包，运行时不请求地图数据。
@@ -108,6 +112,23 @@ npm run generate:landmask   # 需要 devDependencies 中的 world-atlas
 
 `/?force-frames=1`（仅 dev 构建生效）：用定时器驱动渲染循环并直接注入画布尺寸，
 用于无头/被遮挡环境下的自动化验证；正常使用无需此参数。
+
+## 部署（GitHub Pages）
+
+线上地址：<https://yanx5433-cmd.github.io/deep-space-globe/>（由 `gh-pages` 分支提供，HTTPS，满足摄像头所需的安全上下文）。
+
+更新线上版本：
+
+```bash
+npm run build
+# 将 dist/ 内容推送到 gh-pages 分支
+cd dist && git init -b gh-pages && \
+  git add -A && git commit -m "deploy" && \
+  git push -f https://github.com/yanx5433-cmd/deep-space-globe.git gh-pages
+```
+
+构建时的资源基路径由 `vite.config.ts` 中的 `base` 控制（构建为 `/deep-space-globe/`，开发为 `/`），
+MediaPipe wasm 与手势模型路径已通过 `import.meta.env.BASE_URL` 自动适配子路径部署。
 
 ## 故障排查
 

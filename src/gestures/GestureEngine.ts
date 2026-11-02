@@ -16,9 +16,12 @@ import { CITIES } from '../data/cities'
  * - 丢帧保护：连续丢帧冻结状态，静置后自动旋转恢复
  */
 
-const LOCAL_WASM = '/mediapipe/wasm'
+/** 部署基路径（GitHub Pages 子路径 / 本地根路径均可用） */
+const BASE = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`
+
+const LOCAL_WASM = `${BASE}mediapipe/wasm`
 const CDN_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
-const LOCAL_MODEL = '/models/hand_landmarker.task'
+const LOCAL_MODEL = `${BASE}models/hand_landmarker.task`
 const CDN_MODEL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
 
