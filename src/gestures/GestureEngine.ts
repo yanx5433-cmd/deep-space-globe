@@ -48,9 +48,9 @@ const SELECT_COOLDOWN_MS = 1300
  * - smoothK：相机/地球阻尼倍率
  */
 const PROFILES = {
-  low: { deltaAlpha: 0.5, rotK: 5.5, tiltK: 5.0, maxStep: 0.10, pinchGain: 6.5, pinchEma: 0.32, openZoomRate: 0.28, stillMove: 0.0022, smoothK: 0.7 },
-  standard: { deltaAlpha: 0.66, rotK: 7.5, tiltK: 6.4, maxStep: 0.16, pinchGain: 9.0, pinchEma: 0.5, openZoomRate: 0.42, stillMove: 0.003, smoothK: 1 },
-  high: { deltaAlpha: 0.82, rotK: 9.5, tiltK: 8.0, maxStep: 0.24, pinchGain: 12.0, pinchEma: 0.65, openZoomRate: 0.6, stillMove: 0.004, smoothK: 1.3 },
+  low: { deltaAlpha: 0.5, rotK: 5.5, tiltK: 5.0, maxStep: 0.10, pinchGain: 6.5, pinchEma: 0.32, openZoomRate: 0.28, stillMove: 0.0035, smoothK: 0.7 },
+  standard: { deltaAlpha: 0.66, rotK: 7.5, tiltK: 6.4, maxStep: 0.16, pinchGain: 9.0, pinchEma: 0.5, openZoomRate: 0.42, stillMove: 0.005, smoothK: 1 },
+  high: { deltaAlpha: 0.82, rotK: 9.5, tiltK: 8.0, maxStep: 0.24, pinchGain: 12.0, pinchEma: 0.65, openZoomRate: 0.6, stillMove: 0.007, smoothK: 1.3 },
 } as const
 
 type Profile = (typeof PROFILES)[keyof typeof PROFILES]

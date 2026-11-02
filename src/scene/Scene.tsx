@@ -120,6 +120,8 @@ export function Scene() {
     telemetry.lon = wrapDeg(-c.rotY * RAD2DEG)
     telemetry.lat = clamp(c.rotX * RAD2DEG, -90, 90)
     telemetry.zoomMult = ZOOM_DEFAULT / c.zoom
+    const zoomGap = c.zoomTarget - c.zoom
+    telemetry.zoomDir = Math.abs(zoomGap) < 0.012 ? 0 : zoomGap > 0 ? -1 : 1
 
     // 城市屏幕投影（供指向手势 dwell 与鼠标点选）
     const w = state.size.width

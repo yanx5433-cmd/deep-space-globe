@@ -12,6 +12,8 @@ export const telemetry = {
   lat: 24,
   /** 相对默认机位的缩放倍数 */
   zoomMult: 1,
+  /** 缩放方向反馈：1 放大中 / -1 缩小中 / 0 静止 */
+  zoomDir: 0,
   /** 地表粒子数（构建后填充） */
   particles: 0,
   cities: CITIES.length,

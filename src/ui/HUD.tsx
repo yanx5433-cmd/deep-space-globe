@@ -17,6 +17,7 @@ interface Snap {
   lon: number
   lat: number
   zoom: number
+  zoomDir: number
   particles: number
 }
 
@@ -26,7 +27,7 @@ export function HUD() {
   const gesture = useStore((s) => s.gesture)
   const tracking = useStore((s) => s.tracking)
   const engineStatus = useStore((s) => s.engineStatus)
-  const [snap, setSnap] = useState<Snap>({ fps: 0, lon: 105, lat: 24, zoom: 1, particles: 0 })
+  const [snap, setSnap] = useState<Snap>({ fps: 0, lon: 105, lat: 24, zoom: 1, zoomDir: 0, particles: 0 })
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -35,6 +36,7 @@ export function HUD() {
         lon: telemetry.lon,
         lat: telemetry.lat,
         zoom: telemetry.zoomMult,
+        zoomDir: telemetry.zoomDir,
         particles: telemetry.particles,
       })
     }, 220)
@@ -83,7 +85,9 @@ export function HUD() {
       </div>
       <div className="hud-row">
         <span className="hud-k">缩放</span>
-        <span className="hud-v">{snap.zoom.toFixed(2)}×</span>
+        <span className={`hud-v ${snap.zoomDir !== 0 ? 'zoom-active' : ''}`}>
+          {snap.zoom.toFixed(2)}×{snap.zoomDir > 0 ? ' ↑' : snap.zoomDir < 0 ? ' ↓' : ''}
+        </span>
       </div>
       <div className="hud-row">
         <span className="hud-k">手势</span>

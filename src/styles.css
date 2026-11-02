@@ -129,6 +129,11 @@ body {
   text-shadow: 0 0 10px rgba(255, 210, 138, 0.5);
 }
 
+.hud-v.zoom-active {
+  color: var(--ice);
+  text-shadow: 0 0 12px rgba(127, 208, 255, 0.8);
+}
+
 .hud-v.tone-good {
   color: #7dffb0;
 }
